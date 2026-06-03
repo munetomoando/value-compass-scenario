@@ -26,5 +26,26 @@
       s+=`<text class="axis-label${i===0?" top1":""}" x="${x}" y="${y+dy}" text-anchor="${anchor}">${esc(d.label)}</text>`; });
     return s+`</svg>`;
   }
-  return { buildRadarSVG };
+  function buildRadarOverlaySVG(itemsA, itemsB){
+    if(!itemsA || itemsA.length<3) return '<svg viewBox="0 0 320 300" role="img" aria-label="重視度レーダー"></svg>';
+    const n=itemsA.length;
+    const ang=itemsA.map((_,i)=> (-90 + i*(360/n)) * Math.PI/180);
+    const pt=(r,i)=>[ +(CX+r*Math.cos(ang[i])).toFixed(1), +(CY+r*Math.sin(ang[i])).toFixed(1) ];
+    let s=`<svg viewBox="0 0 320 300" width="300" height="282" role="img" aria-label="2シナリオ重視度レーダー">`;
+    [0.25,0.5,0.75,1].forEach(ring=>{
+      const p=itemsA.map((_,i)=>pt(R*ring,i).join(",")).join(" ");
+      s+=`<polygon class="grid-line" points="${p}"/>`;
+    });
+    itemsA.forEach((_,i)=>{ const [x,y]=pt(R,i); s+=`<line class="axis-line" x1="${CX}" y1="${CY}" x2="${x}" y2="${y}"/>`; });
+    const poly=(items,cls)=>{
+      const dp=items.map((d,i)=>pt(R*Math.max(0,Math.min(1,d.value)),i).join(",")).join(" ");
+      return `<polygon class="${cls}" points="${dp}"/>`;
+    };
+    s+=poly(itemsA,"data-poly-a")+poly(itemsB,"data-poly-b");
+    itemsA.forEach((d,i)=>{ const [x,y]=pt(LR,i); const c=Math.cos(ang[i]), sn=Math.sin(ang[i]);
+      const anchor=c>0.3?"start":(c<-0.3?"end":"middle"); const dy=sn<-0.3?-2:(sn>0.3?12:4);
+      s+=`<text class="axis-label" x="${x}" y="${y+dy}" text-anchor="${anchor}">${esc(d.label)}</text>`; });
+    return s+`</svg>`;
+  }
+  return { buildRadarSVG, buildRadarOverlaySVG };
 });
