@@ -10,7 +10,7 @@
 import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
-const NS = "c5bf6d8e591c4297a01ba3d113f9e4bd"; // 本番 LOGS namespace
+const NS = "2ebdd7fffa7e417280c03d81f9faab15"; // v0.3専用 LOGS namespace（title: scenario_logs）
 const ATTR_ORDER = ["income", "location", "hours", "remote", "growth", "stability"];
 
 function wrangler(args) {
