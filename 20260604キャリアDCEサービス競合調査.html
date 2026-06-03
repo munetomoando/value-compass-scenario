@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>離散選択によるキャリア助言サービス 競合調査</title>
+<style>
+  :root{
+    --ink:#1d2433; --sub:#5b6679; --line:#e3e7ef; --bg:#f6f8fb;
+    --card:#ffffff; --accent:#3f6fd8; --accent-weak:#eaf0fc;
+    --pos:#2f9e6e; --neg:#d2604a; --warn:#c98a16; --warn-bg:#fdf6e6;
+    --gold:#b9912f; --gold-bg:#fbf5e4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    line-height:1.75; font-size:15px;}
+  .wrap{max-width:920px; margin:0 auto; padding:48px 24px 80px;}
+  header.head{border-bottom:3px solid var(--accent); padding-bottom:20px;}
+  .tag{display:inline-block; background:var(--accent-weak); color:var(--accent);
+    font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:.04em;}
+  h1{font-size:26px; margin:14px 0 6px; letter-spacing:.01em;}
+  .meta{color:var(--sub); font-size:13px;}
+  h2{font-size:19px; margin:44px 0 14px; padding-left:12px; border-left:5px solid var(--accent);}
+  h3{font-size:15.5px; margin:24px 0 6px;}
+  p{margin:10px 0;}
+  a{color:var(--accent); text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:#eef1f6; padding:1px 6px; border-radius:5px; font-size:13px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:22px 24px; margin:16px 0; box-shadow:0 1px 2px rgba(20,30,60,.03);}
+  .lead{font-size:15.5px; color:var(--sub);}
+  .verdict{background:var(--gold-bg); border:1px solid #ecd9a0; border-radius:12px; padding:20px 24px; margin:18px 0;}
+  .verdict b{color:var(--gold);}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;}
+  th,td{padding:9px 10px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{background:var(--accent-weak); color:#2a4a96; font-weight:700; font-size:12.5px;}
+  tr:hover td{background:#fafbfe;}
+  .yes{color:var(--pos); font-weight:700;} .no{color:var(--neg); font-weight:700;}
+  .partial{color:var(--warn); font-weight:700;}
+  .muted{color:var(--sub);}
+  ul{margin:10px 0; padding-left:22px;} li{margin:6px 0;}
+  /* positioning map */
+  .map{position:relative; background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:0; margin:18px 0; aspect-ratio:1/.72; min-height:360px; overflow:hidden;}
+  .quad{position:absolute; width:50%; height:50%; padding:14px 16px; font-size:12px; color:var(--sub);}
+  .q1{top:0; left:0;} .q2{top:0; right:0; text-align:right;}
+  .q3{bottom:0; left:0;} .q4{bottom:0; right:0; text-align:right;}
+  .axis-v{position:absolute; left:50%; top:0; bottom:0; width:2px; background:#dfe4ee; transform:translateX(-50%);}
+  .axis-h{position:absolute; top:50%; left:0; right:0; height:2px; background:#dfe4ee; transform:translateY(-50%);}
+  .axlab{position:absolute; font-size:11px; font-weight:700; color:#8a93a6;}
+  .axlab.top{top:6px; left:50%; transform:translateX(-50%);}
+  .axlab.bottom{bottom:6px; left:50%; transform:translateX(-50%);}
+  .axlab.left{left:8px; top:50%; transform:translateY(-50%) rotate(0deg); writing-mode:vertical-rl;}
+  .axlab.right{right:8px; top:50%; transform:translateY(-50%); writing-mode:vertical-rl;}
+  .dot{position:absolute; transform:translate(-50%,-50%); font-size:11.5px; font-weight:600;
+    background:#fff; border:1.5px solid var(--accent); color:var(--ink);
+    padding:3px 9px; border-radius:20px; white-space:nowrap; box-shadow:0 1px 3px rgba(20,30,60,.12);}
+  .dot.star{background:var(--accent); color:#fff; border-color:var(--accent); font-weight:800;
+    box-shadow:0 2px 10px rgba(63,111,216,.4); z-index:5;}
+  .dot.sm{font-size:10.5px; padding:2px 7px; color:var(--sub); border-color:#c4ccda;}
+  .note{background:var(--warn-bg); border:1px solid #f0dca6; border-radius:10px; padding:14px 18px; margin:16px 0;}
+  .note b{color:var(--warn);}
+  .takeaway{background:#0f1b33; color:#eaf0ff; border-radius:12px; padding:22px 26px; margin:24px 0;}
+  .takeaway h2{border:0; color:#fff; margin:0 0 10px; padding:0;}
+  .takeaway li{margin:8px 0;} .takeaway a{color:#9cc1ff;}
+  .src{font-size:12.5px; color:var(--sub);}
+  .src li{margin:3px 0; word-break:break-all;}
+  footer{margin-top:54px; padding-top:18px; border-top:1px solid var(--line); color:var(--sub); font-size:12.5px;}
+  .pill{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:6px;}
+  .pill.jp{background:#fdeeea; color:var(--neg);} .pill.us{background:#eaf0fc; color:var(--accent);}
+  @media(max-width:640px){.map{aspect-ratio:auto; height:420px;} .dot{font-size:10px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="head">
+  <span class="tag">COMPETITIVE RESEARCH ／ 競合調査</span>
+  <h1>離散選択（DCE/コンジョイント）でキャリア助言する既存サービス調査</h1>
+  <div class="meta">対象：価値観コンパス v0.2 の類似・競合プロダクト　・　作成日：2026-06-04　・　安藤至大（Munetomo Ando）</div>
+</header>
+
+<div class="verdict">
+  <p style="margin:0;"><b>調査結論：</b>
+  「価値観コンパス」とまったく同じ設計 ―― <b>DCE（強制トレードオフ）で個人の選好を引き出し、"年収◯万円ぶん"という個人別のお金換算（MRS / WTP）フィードバックを返す消費者向けアプリ</b> ―― は、調査の限り<b>存在しない</b>。
+  構成要素（①強制トレードオフ、②お金換算、③個人向けフィードバック、④学生向け体験）はそれぞれ別のツール／研究に存在するが、<b>4つを一本に統合した個人向けプロダクトは空白地帯（ホワイトスペース）</b>である。</p>
+</div>
+
+<div class="card">
+  <p class="lead" style="margin-top:4px;">
+    2方向で横断調査した。<strong>(A) 消費者向けキャリア診断アプリ</strong>（選好の引き出し方とお金換算の有無）、
+    <strong>(B) 学術DCE文献</strong>（職務アメニティの金額評価＝本アプリ推定エンジンの出自）。
+    要点は「お金換算は学術にあり個人に返さない／個人向けアプリはLikert中心でトレードオフでない／金額を出す日本のアプリは照合由来でトレードオフでない」の3点に集約される。
+  </p>
+</div>
+
+<h2>1. ポジショニングマップ</h2>
+<p>「選好の引き出し方（横軸：Likert ↔ 強制トレードオフ/DCE）」×「個人へのお金換算の有無（縦軸）」で配置すると、右上象限が空く。</p>
+<div class="map">
+  <div class="axis-v"></div><div class="axis-h"></div>
+  <span class="axlab top">▲ 個人別のお金換算（MRS/WTP）を返す</span>
+  <span class="axlab bottom">金額を返さない ▼</span>
+  <span class="axlab left">◀ Likert・質問紙</span>
+  <span class="axlab right">強制トレードオフ・DCE ▶</span>
+  <div class="quad q1"></div><div class="quad q2"></div><div class="quad q3"></div><div class="quad q4"></div>
+  <!-- 右上：空白 + 本アプリ -->
+  <div class="dot star" style="top:22%; left:74%;">★ 価値観コンパス</div>
+  <!-- 左上：金額あり×照合/Likert -->
+  <div class="dot" style="top:20%; left:26%;">ミイダス <span class="pill jp">JP</span></div>
+  <div class="dot" style="top:34%; left:30%;">ASSIGN(旧VIEW) <span class="pill jp">JP</span></div>
+  <div class="dot sm" style="top:13%; left:20%;">PathSource</div>
+  <!-- 右上やや下：学術DCE（個人には返さない＝境界線上） -->
+  <div class="dot" style="top:50%; left:80%;">学術DCE研究<br><span class="muted" style="font-weight:400">(集団推定)</span></div>
+  <!-- 右下：強制トレードオフ×金額なし -->
+  <div class="dot" style="top:72%; left:72%;">O*NET WIL/WIP</div>
+  <div class="dot sm" style="top:84%; left:80%;">MyPlan(カードソート)</div>
+  <div class="dot sm" style="top:64%; left:62%;">キャリアアンカー</div>
+  <div class="dot sm" style="top:90%; left:60%;">CliftonStrengths</div>
+  <!-- 左下：Likert×金額なし -->
+  <div class="dot sm" style="top:70%; left:24%;">16Personalities</div>
+  <div class="dot sm" style="top:82%; left:30%;">CareerExplorer</div>
+  <div class="dot sm" style="top:60%; left:16%;">グッドポイント診断 <span class="pill jp">JP</span></div>
+  <div class="dot sm" style="top:90%; left:22%;">マイナビMATCH plus <span class="pill jp">JP</span></div>
+</div>
+<p class="muted" style="font-size:13px;">
+  ※ 学術DCEは「強制トレードオフ×金額」を行うが結果は集団・属性別で<strong>個人に返さない</strong>ため、縦軸中央（境界線上）に配置。本アプリはその手法を個人向け体験に持ち込んだ右上に位置する。
+</p>
+
+<h2>2. 設計思想が最も近い ―― 価値観の強制トレードオフ系</h2>
+<p>本アプリの「強制選択」という機構を共有するが、<strong>お金（年収）を属性に含むコンジョイントではなく、金額換算も出さない</strong>。</p>
+<table>
+  <thead><tr><th>ツール</th><th>提供 / 地域</th><th>手法</th><th>出力</th><th>金額</th></tr></thead>
+  <tbody>
+    <tr><td><b>O*NET Work Importance Locator / Profiler</b></td><td>米労働省 <span class="pill us">US</span></td><td>カードソート＋<b>ペア比較</b>（ipsative強制ランキング）</td><td>6つの労働価値の順位＋適職</td><td class="no">なし</td></tr>
+    <tr><td>MyPlan Values Assessment</td><td>MyPlan <span class="pill us">US</span></td><td>20枚カードのQソート</td><td>同O*NET 6価値の順位</td><td class="no">なし</td></tr>
+    <tr><td>キャリアアンカー（E.シャイン）</td><td>MIT Sloan由来</td><td>8アンカーの強制順位付け</td><td>支配的アンカー1つ</td><td class="no">なし</td></tr>
+    <tr><td>CliftonStrengths（ストレングス）</td><td>Gallup <span class="pill us">US</span></td><td>177組のペア強制選択</td><td>34資質の順位（特性vs特性で職務属性ではない）</td><td class="no">なし</td></tr>
+  </tbody>
+</table>
+<p class="muted" style="font-size:13px;">→ <b>O*NET WIL/WIP が"価値観トレードオフ"計器として最も近い先例</b>。ただし「属性×金額のコンジョイント」「限界代替率の金額提示」という核心は持たない。</p>
+
+<h2>3. 手法の出自 ―― DCE × お金換算（学術文献）</h2>
+<p>本アプリの推定エンジン（差分ロジット→WTP）と理論的に同一なのは、労働経済学の「職務アメニティの価値評価」研究。ただし結果は<strong>集団・サブグループの推定で、個人には返さない</strong>。</p>
+<table>
+  <thead><tr><th>研究</th><th>手法・属性</th><th>金額換算の知見</th></tr></thead>
+  <tbody>
+    <tr><td><b>Mas &amp; Pallais (2017, AER)</b><br>Valuing Alternative Work Arrangements</td><td>実際の採用過程に埋め込んだDCE。在宅・柔軟スケジュール・不規則シフト・労働時間</td><td>不規則シフト回避＝賃金の<b>約20%</b>、在宅＝<b>約8%</b>ぶん</td></tr>
+    <tr><td><b>Maestas et al. (2023, AER)</b><br>The Value of Working Conditions</td><td>9つの労働条件＋賃金・時間のDCE</td><td>アメニティ束は賃金の<b>約56%</b>の価値。賃金不平等の見え方を拡大</td></tr>
+    <tr><td><b>Wiswall &amp; Zafar (2018, QJE)</b><br>Preference for the Workplace</td><td><b>大学生対象</b>の仮想選択。収入水準・成長・安定・柔軟性</td><td>WTPがその後の専攻・就職を予測。<b>男女賃金格差の約25%を説明</b>。<b>学生・進路という点で本アプリに最も近い</b></td></tr>
+    <tr><td>Stern (2004)<br>Do Scientists Pay to Be Scientists?</td><td>複数の実オファーから推定</td><td>研究の自由のために賃金を諦める（アメニティWTPの古典）</td></tr>
+  </tbody>
+</table>
+
+<h2>4. 金額（市場価値）を出す消費者アプリ ―― 日本（学生に身近）</h2>
+<p>ターゲットが日本の大学生のため重要。<strong>金額は出すが、トレードオフ由来ではなくプロフィール照合／回帰で算出</strong>している点が本アプリとの差別化軸。</p>
+<table>
+  <thead><tr><th>サービス</th><th>手法</th><th>出力</th><th>金額</th><th>トレードオフ</th></tr></thead>
+  <tbody>
+    <tr><td><b>ミイダス</b> <span class="pill jp">JP</span></td><td>経歴照合＋コンピテンシー診断＋<b>バイアス診断ゲーム</b>（行動ゲーム）</td><td>特性＋<b>想定年収</b></td><td class="yes">あり</td><td class="no">なし（照合）</td></tr>
+    <tr><td><b>ASSIGN（旧VIEW）</b> <span class="pill jp">JP</span></td><td>価値観24問Likert＋AIマッチング</td><td>キャリアシナリオ＋<b>年収トラジェクトリ</b></td><td class="yes">あり</td><td class="no">なし</td></tr>
+    <tr><td>PathSource <span class="pill us">US</span></td><td>O*NET興味検査＋ライフスタイル計算</td><td>適職＋<b>必要年収</b></td><td class="partial">準</td><td class="no">なし</td></tr>
+  </tbody>
+</table>
+
+<h2>5. 純粋な職務オファー比較系（参考）</h2>
+<p>WorkWomp、JobComparator、各大学キャリアセンターのワークシート等は、複数オファーを<strong>ユーザー重み付けで採点</strong>するもの。コンジョイントではなくWTPも出さない（本アプリとは別カテゴリ）。</p>
+
+<div class="takeaway">
+  <h2>差別化ポジションと示唆</h2>
+  <ul>
+    <li><b>空白象限を占める：</b>「DCE強制選択 × 個人別お金換算 × 学生向けの発見体験」を一本化したプロダクトは見当たらず、ここが本アプリ独自のポジション。</li>
+    <li><b>正統性は学術が裏付け：</b>手法（差分ロジット→WTP）は Mas-Pallais / Maestas / Wiswall-Zafar が確立済み。特に Wiswall-Zafar は<b>学生対象</b>で最も近い。「研究の手法を体験に翻訳した」と訴求できる。</li>
+    <li><b>UXの先例は O*NET WIL：</b>価値観の強制トレードオフという体験は O*NET WIL/WIP・キャリアアンカーに先例があり、受容性は実証済み。</li>
+    <li><b>金額提示の市場性は実証済み：</b>ミイダス・ASSIGN が「年収を出す診断」への需要を証明。本アプリは<b>"照合"ではなく"あなたの選択から導いた"金額</b>という納得性で差別化できる。</li>
+    <li><b>留意：</b>個人向けの金額提示は少観測ゆえブレやすい（前回ログ分析の極端MRS参照）。"目安"明示・クリップは競合との信頼性の差にもなる。</li>
+  </ul>
+</div>
+
+<h2>主要出典</h2>
+<ul class="src">
+  <li>Mas &amp; Pallais (2017) AER — https://www.aeaweb.org/articles?id=10.1257/aer.20161500</li>
+  <li>Maestas et al. (2023) AER — https://www.aeaweb.org/articles?id=10.1257/aer.20190846</li>
+  <li>Wiswall &amp; Zafar (2018) QJE — https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2742578</li>
+  <li>O*NET Work Importance Profiler 解説 — https://www.onetcenter.org/dl_files/DevCWIP.pdf</li>
+  <li>CareerOneStop Work Values Matcher — https://www.careeronestop.org/Toolkit/Careers/work-values-matcher-assessment.aspx</li>
+  <li>MyPlan Values Assessment — https://www.myplan.com/assess/values.php</li>
+  <li>ミイダス（市場価値診断） — https://miidas.jp/</li>
+  <li>ASSIGN（旧VIEW） — https://assign-inc.com/</li>
+  <li>OpinionX marginal WTP ガイド — https://www.opinionx.co/blog/marginal-willingness-to-pay</li>
+</ul>
+
+<footer>
+  価値観コンパス v0.2 競合調査　／　Web調査（2026-06-04時点）。掲載サービスの仕様は変更され得るため最新情報は各公式を参照。／
+  © 2026 安藤至大（Munetomo Ando）。授業教材・機能検証用。
+</footer>
+
+</div>
+</body>
+</html>

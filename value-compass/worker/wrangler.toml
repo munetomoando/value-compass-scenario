@@ -1,0 +1,27 @@
+# Wrangler 4 設定 — 価値観コンパス v0.3（scenario版）回答ログAPI
+name = "value-compass-scenario"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# CORS で許可する GitHub Pages のオリジン（自分の公開URLに置き換える）
+[vars]
+ALLOWED_ORIGIN = "https://munetomoando.github.io"
+
+# 回答ログ保存用 KV namespace。
+# 事前に作成してから id を貼る:
+#   wrangler kv namespace create LOGS
+#   wrangler kv namespace create LOGS --preview
+#   ※ 下記は v0.3 専用に新規作成して置き換えること（v0.2 のKVと混在させない）
+[[kv_namespaces]]
+binding = "LOGS"
+id = "REPLACE_WITH_NEW_KV_ID"          # 外部操作フェーズで新規作成して差し替え
+preview_id = "REPLACE_WITH_NEW_KV_PREVIEW_ID"
+
+# EXPORT_TOKEN は secret として登録（toml には書かない）:
+#   wrangler secret put EXPORT_TOKEN
+#
+# デプロイ:
+#   wrangler deploy
+#
+# ローカル実行:
+#   wrangler dev

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>価値観コンパス v0.2 ― ログ分析レポート</title>
+<style>
+  :root{
+    --ink:#1d2433; --sub:#5b6679; --line:#e3e7ef; --bg:#f6f8fb;
+    --card:#ffffff; --accent:#3f6fd8; --accent-weak:#eaf0fc;
+    --pos:#2f9e6e; --neg:#d2604a; --warn:#c98a16; --warn-bg:#fdf6e6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    line-height:1.75; font-size:15px;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 80px;}
+  header.head{border-bottom:3px solid var(--accent); padding-bottom:20px; margin-bottom:8px;}
+  .tag{display:inline-block; background:var(--accent-weak); color:var(--accent);
+    font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:.04em;}
+  h1{font-size:27px; margin:14px 0 6px; letter-spacing:.01em;}
+  .meta{color:var(--sub); font-size:13px;}
+  h2{font-size:19px; margin:42px 0 14px; padding-left:12px; border-left:5px solid var(--accent);}
+  h3{font-size:15px; margin:26px 0 8px; color:var(--ink);}
+  p{margin:10px 0;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:22px 24px; margin:16px 0; box-shadow:0 1px 2px rgba(20,30,60,.03);}
+  .lead{font-size:15.5px; color:var(--sub);}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:18px 0;}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 12px; text-align:center;}
+  .kpi .n{font-size:26px; font-weight:800; color:var(--accent); line-height:1.2;}
+  .kpi .l{font-size:12px; color:var(--sub); margin-top:2px;}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14px;}
+  th,td{padding:9px 10px; text-align:left; border-bottom:1px solid var(--line);}
+  th{background:var(--accent-weak); color:#2a4a96; font-weight:700; font-size:13px;}
+  td.num,th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  tr:hover td{background:#fafbfe;}
+  .pos{color:var(--pos); font-weight:700;}
+  .neg{color:var(--neg); font-weight:700;}
+  .muted{color:var(--sub);}
+  /* bar chart */
+  .bars{margin:8px 0 4px;}
+  .bar-row{display:grid; grid-template-columns:84px 1fr 64px; align-items:center; gap:10px; margin:7px 0;}
+  .bar-row .lab{font-size:13px; color:var(--ink);}
+  .track{position:relative; height:18px; background:#eef1f6; border-radius:5px; overflow:hidden;}
+  .mid{position:absolute; left:50%; top:0; bottom:0; width:1px; background:#c4ccda;}
+  .fill{position:absolute; top:0; bottom:0; border-radius:4px;}
+  .fill.p{background:linear-gradient(90deg,#5b8af0,#3f6fd8); left:50%;}
+  .fill.n{background:linear-gradient(90deg,#d2604a,#e08f7d); right:50%;}
+  .bv{font-size:13px; text-align:right; font-variant-numeric:tabular-nums; color:var(--sub);}
+  .note{background:var(--warn-bg); border:1px solid #f0dca6; border-radius:10px; padding:14px 18px; margin:16px 0;}
+  .note b{color:var(--warn);}
+  ul{margin:10px 0; padding-left:22px;} li{margin:6px 0;}
+  .takeaway{background:#0f1b33; color:#eaf0ff; border-radius:12px; padding:22px 26px; margin:22px 0;}
+  .takeaway h2{border:0; color:#fff; margin:0 0 10px; padding:0;}
+  .takeaway li{margin:8px 0;}
+  .takeaway a{color:#9cc1ff;}
+  footer{margin-top:54px; padding-top:18px; border-top:1px solid var(--line); color:var(--sub); font-size:12.5px;}
+  .pill{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;}
+  .pill.ok{background:#e7f6ee; color:var(--pos);} .pill.dup{background:#fdeeea; color:var(--neg);}
+  @media(max-width:620px){.kpis{grid-template-columns:repeat(2,1fr);} .bar-row{grid-template-columns:70px 1fr 52px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="head">
+  <span class="tag">DATA REPORT ／ 機能検証</span>
+  <h1>価値観コンパス v0.2 ― 回答ログ分析レポート</h1>
+  <div class="meta">対象データ：<code>value-compass-logs.csv</code>（7セッション／2026-06-02〜06-03）　・　作成日：2026-06-04　・　安藤至大（Munetomo Ando）</div>
+</header>
+
+<div class="card">
+  <p class="lead" style="margin-top:4px;">
+    DCE（離散選択実験）アプリ「価値観コンパス v0.2」の回答ログ7件を分析した。
+    推定エンジン（罰則付きロジット）・MRS換算・注意チェック・決定的瞬間の記録はいずれも正常に動作している。
+    一方で件数が極小かつテスト主体のため、本レポートは<strong>「結果の一般化」ではなく「仕組みの妥当性検証」</strong>として読むべきである。
+  </p>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="n">7</div><div class="l">有効セッション</div></div>
+  <div class="kpi"><div class="n">7/7</div><div class="l">注意チェック通過</div></div>
+  <div class="kpi"><div class="n">3.43</div><div class="l">平均納得度 /5</div></div>
+  <div class="kpi"><div class="n">0.8–4.0<span style="font-size:13px">分</span></div><div class="l">所要時間レンジ</div></div>
+</div>
+
+<h2>1. 集団としての価値観：年収 ＞ 雇用安定 ＞ 転勤なし</h2>
+<p>
+  βの符号（プラス＝「良い水準」を好む）を属性ごとに集計すると、明確な序列が出た。
+  バーは平均β、右数値は「プラス符号だった人数／7」。
+</p>
+<div class="card">
+  <div class="bars">
+    <!-- 値はスケール: 1.10 を半幅95%に対応 (px換算 約86%/単位) -->
+    <div class="bar-row"><span class="lab">年収</span>
+      <div class="track"><span class="mid"></span><span class="fill p" style="width:46%"></span></div>
+      <span class="bv">+1.07 ｜ 7/7</span></div>
+    <div class="bar-row"><span class="lab">雇用安定</span>
+      <div class="track"><span class="mid"></span><span class="fill p" style="width:34%"></span></div>
+      <span class="bv">+0.79 ｜ 6/7</span></div>
+    <div class="bar-row"><span class="lab">勤務地<br><span class="muted" style="font-size:11px">転勤なし</span></span>
+      <div class="track"><span class="mid"></span><span class="fill p" style="width:32%"></span></div>
+      <span class="bv">+0.74 ｜ 6/7</span></div>
+    <div class="bar-row"><span class="lab">労働時間</span>
+      <div class="track"><span class="mid"></span><span class="fill n" style="width:1%"></span></div>
+      <span class="bv">−0.02 ｜ 2/7</span></div>
+    <div class="bar-row"><span class="lab">成長・裁量</span>
+      <div class="track"><span class="mid"></span><span class="fill n" style="width:7%"></span></div>
+      <span class="bv">−0.17 ｜ 2/7</span></div>
+    <div class="bar-row"><span class="lab">在宅勤務</span>
+      <div class="track"><span class="mid"></span><span class="fill n" style="width:11%"></span></div>
+      <span class="bv">−0.25 ｜ 2/7</span></div>
+  </div>
+</div>
+<p>
+  <strong>年収は全員（7/7）がプラス</strong>で、基準財として安定的に識別された。次いで<strong>雇用安定・転勤なし</strong>が二大関心。
+  対して<strong>在宅勤務・成長裁量・労働時間はほぼ中立〜マイナス</strong>で、この層では重視されていない（むしろ出社・裁量小を選ぶ人が多い）。
+  学生対象として、納得感（face validity）の観点で検討に値する傾向である。
+</p>
+
+<h2>2. お金換算（MRS・万円）でみる価値</h2>
+<p>各属性を「年収◯万円ぶん」に換算した中央値・範囲。年収は基準財のため除外。</p>
+<table>
+  <thead><tr><th>属性</th><th class="num">中央値</th><th class="num">平均</th><th class="num">範囲</th><th>解釈</th></tr></thead>
+  <tbody>
+    <tr><td>雇用安定</td><td class="num pos">+70</td><td class="num">+108</td><td class="num muted">−20〜+250</td><td>安定に明確な価値</td></tr>
+    <tr><td>勤務地（転勤なし）</td><td class="num pos">+20</td><td class="num">+128</td><td class="num muted">−10〜+500</td><td>好むが個人差大</td></tr>
+    <tr><td>在宅勤務</td><td class="num muted">±0</td><td class="num">−74</td><td class="num muted">−500〜+190</td><td>評価が割れる</td></tr>
+    <tr><td>労働時間（残業少）</td><td class="num neg">−10</td><td class="num">+8</td><td class="num muted">−40〜+115</td><td>ほぼ中立</td></tr>
+    <tr><td>成長・裁量</td><td class="num neg">−25</td><td class="num">−32</td><td class="num muted">−175〜+105</td><td>裁量小寄り</td></tr>
+  </tbody>
+</table>
+<div class="note">
+  <b>少観測ゆえの注意：</b> 範囲が ±500万円まで広がるのは、観測16問に対しパラメータ6〜7個で
+  <b>完全分離気味</b>になりβが大きく振れるため。設計書§6.3が想定する「MRSは目安」「上限クリップ」が効くべきケースで、
+  平均より<b>中央値で読む</b>のが妥当。特にS4・S7の極端値は割り引いて解釈する。
+</div>
+
+<h2>3. セッション別サマリ</h2>
+<table>
+  <thead><tr><th>#</th><th>日時</th><th class="num">納得度</th><th>最重視→次点（β絶対値）</th><th class="num">count-logit乖離</th><th class="num">所要</th><th>備考</th></tr></thead>
+  <tbody>
+    <tr><td>S1</td><td class="muted">6/03 15:57</td><td class="num">4</td><td>雇用安定 → 成長裁量(逆)</td><td class="num">0.44</td><td class="num">2.2分</td><td></td></tr>
+    <tr><td>S2</td><td class="muted">6/02 13:01</td><td class="num">4</td><td>年収 → 雇用安定</td><td class="num">0.22</td><td class="num">0.8分</td><td><span class="pill dup">S6と一致</span> 流し読み気味</td></tr>
+    <tr><td>S3</td><td class="muted">6/03 11:20</td><td class="num">4</td><td>年収 → 在宅(逆)</td><td class="num">0.22</td><td class="num">4.0分</td><td>じっくり回答</td></tr>
+    <tr><td>S4</td><td class="muted">6/03 14:38</td><td class="num">4</td><td>勤務地 → 在宅</td><td class="num neg">0.56</td><td class="num">3.9分</td><td>推定不安定</td></tr>
+    <tr><td>S5</td><td class="muted">6/02 12:46</td><td class="num">3</td><td>雇用安定 → 年収</td><td class="num">0.22</td><td class="num">1.9分</td><td></td></tr>
+    <tr><td>S6</td><td class="muted">6/02 12:47</td><td class="num">3</td><td>年収 → 雇用安定</td><td class="num">0.22</td><td class="num">3.1分</td><td><span class="pill dup">S2と一致</span>「難しかった」</td></tr>
+    <tr><td>S7</td><td class="muted">6/03 14:55</td><td class="num neg">2</td><td>勤務地 → 在宅(逆)</td><td class="num neg">0.56</td><td class="num">3.4分</td><td>MRS極端・最低納得度</td></tr>
+  </tbody>
+</table>
+
+<h2>4. 注意すべき発見</h2>
+<ul>
+  <li><strong>S2 と S6 はβ・MRSがほぼ完全一致</strong>＝16問すべて同一の選択。提示順・回答時間は異なるため、
+  <strong>同一人物の再受験／同一回答のなぞり（テスト）</strong>の可能性が高い。本番集計では重複として扱う必要がある。</li>
+  <li><strong>納得度と推定安定性が連動</strong>：最低納得度のS7はcount-logit乖離0.56・MRS極端と一致。
+  <strong>推定が暴れる＝納得感が下がる</strong>関係がうかがえ、クリップ／正則化の調整が体験品質に直結する。</li>
+  <li><strong>所要時間が0.8〜4.0分</strong>と設計目標「4〜7分」より短め。S2（本番中央値1.8秒）は<strong>流し読み水準</strong>で、回答品質の監視点。</li>
+  <li><strong>唯一の自由記述は「ちょっと回答するのが難しかった」（S6・納得度3）</strong>。設問の認知負荷を示唆する定性シグナル。</li>
+</ul>
+
+<div class="takeaway">
+  <h2>まとめ & 次の一手</h2>
+  <p style="color:#cdd9f5; margin-top:0;">
+    仕組み（ロジット推定・MRS換算・注意チェック・決定的瞬間の記録）は一通り正常動作。
+    ただし <b>n=7・テストデータ主体・S2/S6重複・少観測の極端MRS</b> のため、結果の一般化はまだできない。
+  </p>
+  <ul>
+    <li><b>① 重複除外ルール</b>：βシグネチャ一致セッションの検出・除外を集計前処理に組み込む。</li>
+    <li><b>② クリップ検証</b>：MRSの上限クリップ・正則化λが実データで効いているか（±500万のケース）を確認。</li>
+    <li><b>③ 件数積み増し</b>：本番投入でサンプルを増やし、傾向を統計的に評価できる水準へ。</li>
+    <li><b>④ 品質フラグ運用</b>：最小応答時間・count-logit乖離を閾値化し、低品質セッションを自動フラグ。</li>
+  </ul>
+</div>
+
+<footer>
+  価値観コンパス v0.2 機能検証レポート　／　分析対象7セッション（匿名・個人識別情報なし）　／
+  © 2026 安藤至大（Munetomo Ando）。授業教材・機能検証用、商用転用しない方針。
+</footer>
+
+</div>
+</body>
+</html>
