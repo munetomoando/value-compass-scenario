@@ -48,27 +48,13 @@
       .then(function (json) {
         DATA = json;
         META = json.meta;
-        SEQUENCE = buildSequence(json.questions);
+        SEQUENCE = window.ValueCompassSequence.buildSequence(json.questions);
         bindIntro();
       })
       .catch(function (e) {
         $("#intro").innerHTML = '<p class="error">設問データの読み込みに失敗しました。ローカルでは簡易サーバ経由で開いてください（例: <code>python3 -m http.server</code>）。</p>';
         console.error(e);
       });
-  }
-
-  function shuffle(arr){ // セッション毎ランダム（測定の順序効果対策）
-    const a=arr.slice();
-    for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
-    return a;
-  }
-  function buildSequence(questions){
-    const practice = questions.find(q=>q.type==="practice");
-    const dominant = questions.find(q=>q.type==="dominant");
-    const mains = shuffle(questions.filter(q=>q.type==="main"));
-    const pos = 6 + Math.floor(Math.random()*5); // 6〜10番目あたりに支配選択を挿入
-    mains.splice(pos, 0, dominant);
-    return [practice, ...mains];
   }
 
   function bindIntro() {
@@ -139,7 +125,7 @@
   function onChoose(choice, btn) {
     const q = SEQUENCE[cursor];
     const ms = Math.round(performance.now() - questionShownAt);
-    answers.push({ q_id: q.id, choice: choice, response_ms: ms });
+    answers.push({ q_id: q.id, choice: choice, response_ms: ms, scenario: q.scenario || null });
 
     if (q.type === "main") showTradeoffFlash(q, choice);
 
