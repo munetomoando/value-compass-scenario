@@ -12,11 +12,11 @@ function rng(seed){
 }
 
 const META = {
-  app_version: "0.2",
+  app_version: "0.3",
   framing: {
     income_anchor: "age30_gross",
-    family_assumption: "none_current_self",
-    note: "年収はその仕事に就いた30歳頃の額面。転勤・在宅などはその仕事がずっと持つ特徴。特定の家族構成は仮定せず、今のあなたの感覚で。"
+    scenarios: ["single_no_plan", "married_one_child"],
+    note: "年収はその仕事に就いた30歳頃の額面。転勤・在宅などはその仕事がずっと持つ特徴。各シナリオの家族設定でどう感じるかを率直に選んでください。"
   },
   attributes: {
     income:   { label:"年収", unit:"万円", levels:{ "300":"年収300万", "450":"年収450万", "600":"年収600万", "750":"年収750万" }, kind:"continuous", good:"max" },
@@ -72,45 +72,47 @@ function penalty(mains){
   let pen=0;
   for(const k of BIN_KEYS){
     const n = mains.filter(q=>q.A[k]!==q.B[k]).length;
-    const target=11; pen += Math.abs(n-target); // 16問中 ~11問で各2値属性が分岐するのが目標
+    const target=7; pen += Math.abs(n-target);
   }
   const incBranch = mains.filter(q=>q.A.income!==q.B.income).length;
-  pen += Math.abs(incBranch-13); // 年収は分岐しやすいため目標を ~13 に設定
+  pen += Math.abs(incBranch-8);
   const cnt = Object.fromEntries(INCOME.map(v=>[v,0]));
   for(const q of mains){ cnt[q.A.income]++; cnt[q.B.income]++; }
-  const avg = (16*2)/4;
+  const avg = (10*2)/4;
   pen += INCOME.reduce((s,v)=>s+Math.abs(cnt[v]-avg),0)*0.5;
   return pen;
 }
 
-function buildMains(seed){
+function buildMains(seed, count){
   const r=rng(seed);
   let best=null, bestPen=Infinity;
-  for(let attempt=0; attempt<4000; attempt++){
+  for(let attempt=0; attempt<6000; attempt++){
     const mains=[];
-    for(let i=0;i<16;i++){ const p=makePair(r); if(p) mains.push(p); }
-    if(mains.length<16) continue;
+    for(let i=0;i<count;i++){ const p=makePair(r); if(p) mains.push(p); }
+    if(mains.length<count) continue;
     const pen=penalty(mains);
-    if(pen<bestPen){ bestPen=pen; best=mains; if(pen<=6) break; } // pen<=6 で十分な品質と判断して早期終了
+    if(pen<bestPen){ bestPen=pen; best=mains; if(pen<=5) break; }
   }
   return { mains:best, pen:bestPen };
 }
 
 function build(){
-  const { mains, pen } = buildMains(20260602);
-  if(!mains) throw new Error("設問生成に失敗");
+  const blockA = buildMains(20260604, 10);
+  const blockB = buildMains(20260605, 10);
+  if(!blockA.mains || !blockB.mains) throw new Error("設問生成に失敗");
   const questions = [];
-  questions.push({ id:"practice", type:"practice", scored:false, intent:"操作に慣れる",
+  questions.push({ id:"practice", type:"practice", scored:false, scenario:null, intent:"操作に慣れる",
     A:{income:"450",location:"なし",hours:"少",remote:"可",growth:"小",stability:"安定"},
     B:{income:"450",location:"あり",hours:"多",remote:"不可",growth:"大",stability:"不安定"} });
-  mains.forEach((m,i)=> questions.push({ id:"q"+String(i+1).padStart(2,"0"), type:"main", scored:true,
-    intent:"トレードオフ", A:m.A, B:m.B }));
-  questions.push({ id:"qd", type:"dominant", scored:false, intent:"注意チェック（Aが全優位）",
+  blockA.mains.forEach((m,i)=> questions.push({ id:"a"+String(i+1).padStart(2,"0"), type:"main", scored:true,
+    scenario:"A", intent:"トレードオフ", A:m.A, B:m.B }));
+  blockB.mains.forEach((m,i)=> questions.push({ id:"b"+String(i+1).padStart(2,"0"), type:"main", scored:true,
+    scenario:"B", intent:"トレードオフ", A:m.A, B:m.B }));
+  questions.push({ id:"qd", type:"dominant", scored:false, scenario:null, intent:"注意チェック（Aが全優位）",
     A:{income:"750",location:"なし",hours:"少",remote:"可",growth:"大",stability:"安定"},
     B:{income:"300",location:"あり",hours:"多",remote:"不可",growth:"小",stability:"不安定"} });
-
   writeFileSync(new URL("./questions.json",import.meta.url),
     JSON.stringify({ meta:META, questions }, null, 2)+"\n");
-  console.log("生成完了 penalty=",pen);
+  console.log("生成完了 penaltyA=",blockA.pen," penaltyB=",blockB.pen);
 }
 build();
