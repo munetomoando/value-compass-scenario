@@ -53,6 +53,33 @@
     return beta;
   }
 
+  // 列ごとに異なるリッジ罰則をかける二項ロジット（penalties: 長さpの配列）
+  function fitLogitW(X, y, penalties, opts){
+    if (!X || X.length === 0) throw new Error("fitLogitW: X must be non-empty");
+    opts = opts || {};
+    const maxIter = opts.maxIter || 60;
+    const p = X[0].length;
+    let beta = new Array(p).fill(0);
+    let converged = false;
+    for(let it=0; it<maxIter; it++){
+      const g = new Array(p).fill(0);
+      const H = Array.from({length:p},()=>new Array(p).fill(0));
+      for(let i=0;i<X.length;i++){
+        let eta=0; for(let j=0;j<p;j++) eta+=X[i][j]*beta[j];
+        const mu=1/(1+Math.exp(-eta)); const w=Math.max(mu*(1-mu),1e-6);
+        for(let j=0;j<p;j++){
+          g[j]+=X[i][j]*(y[i]-mu);
+          for(let k=0;k<p;k++) H[j][k]+=X[i][j]*X[i][k]*w;
+        }
+      }
+      for(let j=0;j<p;j++){ const pen=penalties[j]||0; g[j]-=pen*beta[j]; H[j][j]+=pen; }
+      const step = solve(H, g);
+      let maxd=0; for(let j=0;j<p;j++){ beta[j]+=step[j]; maxd=Math.max(maxd,Math.abs(step[j])); }
+      if(maxd<1e-7){ converged=true; break; }
+    }
+    return { beta, converged };
+  }
+
   // 属性値→数値（incomeは100万単位、二値はgood=1/bad=0、subjectiveは名目good=1）
   function code(meta, attr, val){
     const def = meta.attributes[attr];
@@ -107,6 +134,84 @@
     return { beta, importance, importance_rank, mrs_manyen,
              _design:{ Xdiff, beta_full, mainsIds: mains.map(q=>q.id) } // デバッグ用・外部仕様外
            };
+  }
+
+  // βマップ→MRS（万円）マップ。bInc=β_income。v0.2 §6.3 のクリップ/null処理を踏襲
+  function mrsFromBeta(order, betaMap, bInc){
+    const out={};
+    for(const a of order){
+      if(a==="income") continue;
+      if(!Number.isFinite(bInc) || bInc<0.02){ out[a]=null; continue; }
+      let v=(betaMap[a]/bInc)*100;
+      if(!Number.isFinite(v)){ out[a]=null; continue; }
+      out[a]=Math.max(-500,Math.min(500, Math.round(v/5)*5));
+    }
+    return out;
+  }
+
+  // プール推定：全20問を1モデルに入れ、属性×シナリオ交互作用でシフトを推定
+  //   answers: [{ q_id, choice, response_ms, scenario:"A"|"B" }]
+  //   opts.forceConstrained=true で交互作用を hours/remote/location/stability に限定
+  function estimate2(questions, meta, answers, opts){
+    opts = opts || {};
+    const order = meta.attribute_order;
+    const SHIFT = ["location","hours","remote","stability"];
+    const ansById={}; answers.forEach(a=>ansById[a.q_id]=a);
+    const mains = questions.filter(q=>q.scored);
+
+    function fit(constrained){
+      const intCols = constrained ? SHIFT : order;
+      const X=[], y=[];
+      for(const q of mains){
+        const a=ansById[q.id]; if(!a) continue;
+        const d=designRow(meta,q);
+        const s = (a.scenario||q.scenario)==="B" ? 1 : 0;
+        const inter = intCols.map((attr)=> s * d[order.indexOf(attr)]);
+        X.push([1, ...d, ...inter]); y.push(a.choice==="A"?1:0);
+      }
+      const pen=[0, ...order.map(()=>0.5), ...intCols.map(()=>1.5)];
+      const { beta:bf, converged } = fitLogitW(X, y, pen);
+      const beta_A={}, gamma={};
+      order.forEach((a,i)=> beta_A[a]=bf[i+1]);
+      order.forEach(a=> gamma[a]=0);
+      intCols.forEach((attr,j)=> gamma[attr]=bf[1+order.length+j]);
+      return { beta_A, gamma, converged };
+    }
+
+    let constrained = !!opts.forceConstrained;
+    let f = fit(constrained);
+    const blew = !f.converged || order.some(a=>Math.abs(f.gamma[a])>8);
+    if(blew && !constrained){ constrained=true; f=fit(true); }
+
+    const beta_A=f.beta_A, gamma=f.gamma;
+    const beta_B={}; order.forEach(a=> beta_B[a]=beta_A[a]+gamma[a]);
+
+    const mrs_A=mrsFromBeta(order, beta_A, beta_A.income);
+    const mrs_B=mrsFromBeta(order, beta_B, beta_B.income);
+    const delta={};
+    for(const a of order){ if(a==="income") continue;
+      delta[a]=(mrs_A[a]===null||mrs_B[a]===null)?null:(mrs_B[a]-mrs_A[a]); }
+
+    function importanceOf(betaMap, flt){
+      const cols=order.map(()=>[]);
+      mains.forEach(q=>{ const a=ansById[q.id]; if(!a) return;
+        if((a.scenario||q.scenario)!==flt) return;
+        const d=designRow(meta,q); order.forEach((_,i)=>cols[i].push(d[i])); });
+      const imp={}; order.forEach((a,i)=> imp[a]=Math.abs(betaMap[a])*std(cols[i]));
+      const mx=Math.max(...Object.values(imp),1e-9); const out={};
+      order.forEach(a=> out[a]=imp[a]/mx); return out;
+    }
+    const importance_A=importanceOf(beta_A,"A"), importance_B=importanceOf(beta_B,"B");
+    const rankA=order.slice().sort((x,z)=>importance_A[z]-importance_A[x]);
+    const rankB=order.slice().sort((x,z)=>importance_B[z]-importance_B[x]);
+
+    const norm=m=>Math.sqrt(order.reduce((s,a)=>s+m[a]*m[a],0));
+    const scale_diff = +(Math.log((norm(beta_B)+1e-9)/(norm(beta_A)+1e-9))).toFixed(3);
+
+    return { beta_A, beta_B, gamma,
+             mrs_A_manyen:mrs_A, mrs_B_manyen:mrs_B, delta_wtp_manyen:delta,
+             importance_A, importance_B, importance_rank_A:rankA, importance_rank_B:rankB,
+             scale_diff, fallback_constrained:constrained, converged:f.converged };
   }
 
   function zscores(arr){
@@ -168,5 +273,5 @@
     return { decisive, quality:{ dominant_passed, min_response_ms, logit_count_divergence }, counts, verbal:{ text, keep, tradeable, direction:dir, label } };
   }
 
-  return { fitLogit, solve, estimate, extras, designRow, code };
+  return { fitLogit, fitLogitW, solve, estimate, estimate2, mrsFromBeta, extras, designRow, code };
 });
