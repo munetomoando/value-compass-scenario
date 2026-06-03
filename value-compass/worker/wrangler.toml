@@ -14,8 +14,8 @@ ALLOWED_ORIGIN = "https://munetomoando.github.io"
 #   ※ 下記は v0.3 専用に新規作成して置き換えること（v0.2 のKVと混在させない）
 [[kv_namespaces]]
 binding = "LOGS"
-id = "REPLACE_WITH_NEW_KV_ID"          # 外部操作フェーズで新規作成して差し替え
-preview_id = "REPLACE_WITH_NEW_KV_PREVIEW_ID"
+id = "2ebdd7fffa7e417280c03d81f9faab15"          # v0.3専用（title: scenario_logs）。v0.2のLOGSとは別
+preview_id = "9c8790cb24ac4ac98c6e9231fbbd59b3"
 
 # EXPORT_TOKEN は secret として登録（toml には書かない）:
 #   wrangler secret put EXPORT_TOKEN
