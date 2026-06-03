@@ -257,13 +257,27 @@
       { kicker:"DISCOVERY 6 / 6", title:"2つの人生で変わるあなた",
         html:(function(){
           const lab = ex.verbal.label;
-          const movers = order.filter(a=>a!=="income" && est2.delta_wtp_manyen[a]!==null)
+          const nonInc = order.filter(a=>a!=="income");
+          // 金額（MRS）ベースの変化。年収換算が両シナリオで出せる属性のみ。
+          const mrsMovers = nonInc.filter(a=>est2.delta_wtp_manyen[a]!==null)
             .sort((x,z)=>Math.abs(est2.delta_wtp_manyen[z])-Math.abs(est2.delta_wtp_manyen[x]));
-          const top = movers[0];
-          const moverText = top
-            ? `子育て中のあなたは、<strong>${lab[top]}</strong>の価値が ${est2.delta_wtp_manyen[top]>=0?"+":""}${est2.delta_wtp_manyen[top]}万円ぶん ${est2.delta_wtp_manyen[top]>=0?"上がりました":"下がりました"}。`
-            : `2つの人生で、価値の重みづけに大きな差は出ませんでした。`;
-          const core = movers.slice().sort((x,z)=>Math.abs(est2.delta_wtp_manyen[x])-Math.abs(est2.delta_wtp_manyen[z])).slice(0,2);
+          // 重要度ベースの変化（年収を重視せず金額が出せない時の代替）。
+          const impDelta = a => est2.importance_B[a]-est2.importance_A[a];
+          const impMovers = nonInc.slice().sort((x,z)=>Math.abs(impDelta(z))-Math.abs(impDelta(x)));
+          let moverText, core;
+          if (mrsMovers.length && Math.abs(est2.delta_wtp_manyen[mrsMovers[0]])>=5){
+            const top = mrsMovers[0], d = est2.delta_wtp_manyen[top];
+            moverText = `子育て中のあなたは、<strong>${lab[top]}</strong>の価値が ${d>=0?"+":""}${d}万円ぶん ${d>=0?"上がりました":"下がりました"}。`;
+            core = mrsMovers.slice().sort((x,z)=>Math.abs(est2.delta_wtp_manyen[x])-Math.abs(est2.delta_wtp_manyen[z])).slice(0,2);
+          } else if (Math.abs(impDelta(impMovers[0]))>=0.1){
+            const top = impMovers[0], up = impDelta(top)>=0;
+            moverText = `子育て中のあなたは、<strong>${lab[top]}</strong>の重みが ${up?"大きく上がりました":"下がりました"}。`
+              + `（このシナリオでは年収をあまり重視しなかったため、金額換算は省略します）`;
+            core = impMovers.slice().sort((x,z)=>Math.abs(impDelta(x))-Math.abs(impDelta(z))).slice(0,2);
+          } else {
+            moverText = `2つの人生で、価値の重みづけに大きな差は出ませんでした。あなたの選好は人生の状況に左右されにくいようです。`;
+            core = impMovers.slice(0,2);
+          }
           const coreText = core.length ? core.map(a=>lab[a]).join("・") : "—";
           return `<p class="lead">独身のあなた（青）と、子育て中のあなた（赤）の重視度を重ねました。</p>`
             + `<div class="radar-wrap">${overlaySVG}</div>`
