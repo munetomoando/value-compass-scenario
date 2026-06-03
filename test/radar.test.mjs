@@ -26,3 +26,13 @@ test("項目が少なすぎる場合は空SVGを返す（例外なし）", () =>
   assert.doesNotThrow(()=>R.buildRadarSVG([]));
   assert.match(R.buildRadarSVG([]), /<svg/);
 });
+
+test("buildRadarOverlaySVG は2つのデータポリゴンを描く", () => {
+  const items = ["年収","勤務地","労働時間","在宅","裁量","安定"];
+  const A = items.map((l,i)=>({label:l, value:i/5}));
+  const B = items.map((l,i)=>({label:l, value:1-i/5}));
+  const svg = R.buildRadarOverlaySVG(A, B);
+  assert.match(svg, /class="data-poly-a"/);
+  assert.match(svg, /class="data-poly-b"/);
+  assert.match(svg, /<svg/);
+});
