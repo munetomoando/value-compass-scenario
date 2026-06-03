@@ -301,19 +301,31 @@
   }
 
   function buildPayload(agreement, freeText) {
-    const est=estResult.est, ex=estResult.extras;
+    const est2 = estResult.est2, ex = estResult.extras;
+    const blocks = { A:{ scenario:"single_no_plan", answers:[] }, B:{ scenario:"married_one_child", answers:[] } };
+    answers.forEach(function(a){ if (a.scenario === "A") blocks.A.answers.push(a); else if (a.scenario === "B") blocks.B.answers.push(a); });
+    const firstScn = SEQUENCE.find(function(q){ return q.type==="main"; }).scenario;
     return {
       session_id: sessionId,
       timestamp: new Date().toISOString(),
       framing: META.framing,
-      question_order: SEQUENCE.map(q=>q.id),
+      scenario_order: firstScn==="A" ? ["single_no_plan","married_one_child"] : ["married_one_child","single_no_plan"],
+      question_order: SEQUENCE.map(function(q){ return q.id; }),
+      blocks: blocks,
       answers: answers,
-      estimate: { method:"binary_logit_ridge", lambda:0.5, beta:est.beta, mrs_manyen:est.mrs_manyen, importance_rank:est.importance_rank },
+      estimate: {
+        method: "pooled_binary_logit_ridge_interaction",
+        beta_A: est2.beta_A, gamma: est2.gamma,
+        mrs_A_manyen: est2.mrs_A_manyen, mrs_B_manyen: est2.mrs_B_manyen,
+        delta_wtp_manyen: est2.delta_wtp_manyen,
+        importance_rank_A: est2.importance_rank_A, importance_rank_B: est2.importance_rank_B,
+        scale_diff: est2.scale_diff, fallback_constrained: est2.fallback_constrained, converged: est2.converged
+      },
       counts: ex.counts,
       decisive: ex.decisive,
-      quality: ex.quality,
+      quality: Object.assign({}, ex.quality, { scale_diff: est2.scale_diff, fallback_constrained: est2.fallback_constrained }),
       feedback: { agreement: agreement, free_text: freeText },
-      app_version: "0.2"
+      app_version: "0.3"
     };
   }
 
