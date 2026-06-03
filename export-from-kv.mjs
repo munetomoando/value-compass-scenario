@@ -35,6 +35,11 @@ function csvEscape(val) {
 }
 
 function toCsv(records) {
+  const BETA_A_ATTRS = ["income", "location", "hours", "remote", "growth", "stability"];
+  const GAMMA_ATTRS = ["location", "hours", "remote", "stability"];
+  const MRS_ATTRS = ["location", "hours", "remote", "growth", "stability"];
+  const DELTA_ATTRS = ["hours", "remote", "location", "stability"];
+
   const header = [
     "session_id", "timestamp", "received_at", "app_version",
     ...ATTR_ORDER.map((a) => "count_" + a),
@@ -42,12 +47,20 @@ function toCsv(records) {
     ...ATTR_ORDER.filter((a) => a !== "income").map((a) => "mrs_" + a),
     "most_hesitated_qid", "fastest_qid", "logit_count_divergence",
     "dominant_passed", "min_response_ms",
-    "agreement", "free_text", "answers_json"
+    "agreement", "free_text", "answers_json",
+    "scenario_order",
+    ...BETA_A_ATTRS.map((a) => "beta_A_" + a),
+    ...GAMMA_ATTRS.map((a) => "gamma_" + a),
+    ...MRS_ATTRS.map((a) => "mrsA_" + a),
+    ...MRS_ATTRS.map((a) => "mrsB_" + a),
+    ...DELTA_ATTRS.map((a) => "delta_" + a),
+    "scale_diff", "fallback_constrained"
   ];
   const rows = records.map((r) => {
     const scores = r.scores || r.counts || {};
     const quality = r.quality || {};
     const feedback = r.feedback || {};
+    const est = r.estimate || {};
     return [
       r.session_id, r.timestamp, r.received_at, r.app_version,
       ...ATTR_ORDER.map((a) => (a in scores ? scores[a] : "")),
@@ -58,7 +71,15 @@ function toCsv(records) {
       (quality.logit_count_divergence != null) ? quality.logit_count_divergence : "",
       quality.dominant_passed, quality.min_response_ms,
       feedback.agreement, feedback.free_text,
-      JSON.stringify(r.answers || [])
+      JSON.stringify(r.answers || []),
+      (r.scenario_order || []).join("|"),
+      ...BETA_A_ATTRS.map((a) => (est.beta_A && a in est.beta_A) ? est.beta_A[a] : ""),
+      ...GAMMA_ATTRS.map((a) => (est.gamma && a in est.gamma) ? est.gamma[a] : ""),
+      ...MRS_ATTRS.map((a) => (est.mrs_A_manyen && a in est.mrs_A_manyen) ? est.mrs_A_manyen[a] : ""),
+      ...MRS_ATTRS.map((a) => (est.mrs_B_manyen && a in est.mrs_B_manyen) ? est.mrs_B_manyen[a] : ""),
+      ...DELTA_ATTRS.map((a) => (est.delta_wtp_manyen && a in est.delta_wtp_manyen) ? est.delta_wtp_manyen[a] : ""),
+      (est.scale_diff != null) ? est.scale_diff : "",
+      (est.fallback_constrained != null) ? est.fallback_constrained : ""
     ].map(csvEscape).join(",");
   });
   return [header.map(csvEscape).join(","), ...rows].join("\n") + "\n";
