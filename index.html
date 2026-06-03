@@ -32,6 +32,26 @@
       </div>
     </section>
 
+    <!-- 2a. シナリオ提示画面（1つ目の人生） -->
+    <section id="scenario-intro" class="screen">
+      <div class="card">
+        <p class="kicker" id="scn-kicker"></p>
+        <h2 id="scn-title"></h2>
+        <p class="lead" id="scn-desc"></p>
+        <button id="scn-begin-btn" class="primary">この人生で答える →</button>
+      </div>
+    </section>
+
+    <!-- 2b. シナリオ切替画面（2つ目の人生へ） -->
+    <section id="scenario-switch" class="screen">
+      <div class="card">
+        <p class="kicker">ここからは別の人生のあなたで</p>
+        <h2 id="switch-title"></h2>
+        <p class="lead" id="switch-desc"></p>
+        <button id="switch-begin-btn" class="primary">次の人生で答える →</button>
+      </div>
+    </section>
+
     <!-- 2-3. 設問画面（練習・本番・支配選択を兼用） -->
     <section id="question" class="screen">
       <div class="progress"><span id="progress-bar-fill"></span></div>
@@ -107,6 +127,7 @@
 
   <script src="estimate.js"></script>
   <script src="radar.js"></script>
+  <script src="sequence.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
