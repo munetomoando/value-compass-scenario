@@ -179,29 +179,32 @@
   function computeAndShowResult() {
     $("#progress-bar-fill").style.width = "100%";
     const E = window.ValueCompassEstimate;
-    const est = E.estimate(DATA.questions, META, answers);
-    const ex = E.extras(DATA.questions, META, answers, est);
-    estResult = { est: est, extras: ex };
-    buildReveal(est, ex);
+    const est2 = E.estimate2(DATA.questions, META, answers);
+    const ex = E.extras(DATA.questions, META, answers, { beta: est2.beta_A, importance: est2.importance_A, importance_rank: est2.importance_rank_A, mrs_manyen: est2.mrs_A_manyen });
+    estResult = { est2: est2, extras: ex };
+    buildReveal(est2, ex);
     if (!ex.quality.dominant_passed) $("#quality-note").style.display = "block";
     show("result");
   }
 
   function mdBold(s){ return s.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); }
 
-  function buildReveal(est, ex){
+  function buildReveal(est2, ex){
     const order = META.attribute_order;
     const label = ex.verbal.label;
-    const radarItems = order.map(a=>({ label: ({income:"年収",location:"勤務地",hours:"労働時間",remote:"在宅勤務",growth:"裁量・成長",stability:"安定性"})[a], value: est.importance[a] }));
-    const radarSVG = window.ValueCompassRadar.buildRadarSVG(radarItems);
+    const radarLabels = { income:"年収", location:"勤務地", hours:"労働時間", remote:"在宅勤務", growth:"裁量・成長", stability:"安定性" };
+    const itemsA = order.map(a=>({ label: radarLabels[a], value: est2.importance_A[a] }));
+    const itemsB = order.map(a=>({ label: radarLabels[a], value: est2.importance_B[a] }));
+    const radarSVG = window.ValueCompassRadar.buildRadarSVG(itemsA);
+    const overlaySVG = window.ValueCompassRadar.buildRadarOverlaySVG(itemsA, itemsB);
 
-    const moneyRows = est.importance_rank.filter(a=>a!=="income").slice(0,4).map(a=>{
-      const v = est.mrs_manyen[a];
+    const moneyRows = est2.importance_rank_A.filter(a=>a!=="income").slice(0,4).map(a=>{
+      const v = est2.mrs_A_manyen[a];
       const valHtml = (v===null) ? `<span class="val neg">換算を省略</span>`
         : (v>=0 ? `<span class="val">+${v}万円</span>` : `<span class="val neg">${v}万円</span>`);
       return `<div class="money-item"><span class="label">${label[a]}</span>${valHtml}</div>`;
     }).join("");
-    const incNote = (Object.values(est.mrs_manyen).every(v=>v===null))
+    const incNote = (Object.values(est2.mrs_A_manyen).every(v=>v===null))
       ? `<p class="money-sub">年収をあまり重視しなかったため、金額換算は省略しました。</p>`
       : `<p class="money-sub">＝その条件のために、これだけの年収を諦めてもよいと考えた、という目安です。</p>`;
 
@@ -220,16 +223,32 @@
     };
 
     const cards = [
-      { kicker:"DISCOVERY 1 / 5", title:"あなたの重視度コンパス",
+      { kicker:"DISCOVERY 1 / 6", title:"あなたの重視度コンパス",
         html:`<p class="lead">${answers.filter(ans=>{const q=qById[ans.q_id];return q&&q.scored;}).length}回の選択から、各条件の重みを推定しました。外側ほど重視しています。</p><div class="radar-wrap">${radarSVG}</div>` },
-      { kicker:"DISCOVERY 2 / 5", title:"お金に換算すると",
+      { kicker:"DISCOVERY 2 / 6", title:"お金に換算すると",
         html:`<p class="lead">あなたの選択を年収（30歳頃・額面）に換算しました。</p><div class="money">${moneyRows}</div>${incNote}` },
-      { kicker:"DISCOVERY 3 / 5", title:"決定的だった瞬間",
+      { kicker:"DISCOVERY 3 / 6", title:"決定的だった瞬間",
         html:`<div class="moment"><div class="m-tag">いちばん悩んだ選択</div><div class="m-body">${qDesc(qById[dHi])}</div></div><div class="moment fast"><div class="m-tag">迷わず選んだ選択</div><div class="m-body">${qDesc(qById[dLo])}</div></div>` },
-      { kicker:"DISCOVERY 4 / 5", title:"譲れない線、出せる線",
+      { kicker:"DISCOVERY 4 / 6", title:"譲れない線、出せる線",
         html:`<div class="cols"><div class="box keep"><h4>譲りにくい条件</h4><ul>${ex.verbal.keep.map(s=>`<li>${s}</li>`).join("")}</ul></div><div class="box trade"><h4>交換に出しやすい条件</h4><ul>${ex.verbal.tradeable.map(s=>`<li>${s}</li>`).join("")}</ul></div></div><p class="money-sub" style="margin-top:14px">${mdBold(ex.verbal.text)}</p>` },
-      { kicker:"DISCOVERY 5 / 5", title:"いま行ったことの種明かし",
-        html:`<div class="reveal-box">いま行ったのは<strong>離散選択実験（DCE）</strong>です。複数条件を同時に動かす二択を繰り返すことで、口で言う重視度ではなく<strong>実際の選択から</strong>重みを逆算しています。</div>` }
+      { kicker:"DISCOVERY 5 / 6", title:"いま行ったことの種明かし",
+        html:`<div class="reveal-box">いま行ったのは<strong>離散選択実験（DCE）</strong>です。複数条件を同時に動かす二択を繰り返すことで、口で言う重視度ではなく<strong>実際の選択から</strong>重みを逆算しています。</div>` },
+      { kicker:"DISCOVERY 6 / 6", title:"2つの人生で変わるあなた",
+        html:(function(){
+          const lab = ex.verbal.label;
+          const movers = order.filter(a=>a!=="income" && est2.delta_wtp_manyen[a]!==null)
+            .sort((x,z)=>Math.abs(est2.delta_wtp_manyen[z])-Math.abs(est2.delta_wtp_manyen[x]));
+          const top = movers[0];
+          const moverText = top
+            ? `子育て中のあなたは、<strong>${lab[top]}</strong>の価値が ${est2.delta_wtp_manyen[top]>=0?"+":""}${est2.delta_wtp_manyen[top]}万円ぶん ${est2.delta_wtp_manyen[top]>=0?"上がりました":"下がりました"}。`
+            : `2つの人生で、価値の重みづけに大きな差は出ませんでした。`;
+          const core = movers.slice().sort((x,z)=>Math.abs(est2.delta_wtp_manyen[x])-Math.abs(est2.delta_wtp_manyen[z])).slice(0,2);
+          const coreText = core.length ? core.map(a=>lab[a]).join("・") : "—";
+          return `<p class="lead">独身のあなた（青）と、子育て中のあなた（赤）の重視度を重ねました。</p>`
+            + `<div class="radar-wrap">${overlaySVG}</div>`
+            + `<p class="money-sub">${moverText}</p>`
+            + `<div class="box keep" style="margin-top:12px"><h4>どんな人生でも譲れない核</h4><p>${coreText}</p></div>`;
+        })() }
     ];
 
     let i=0;
