@@ -19,6 +19,11 @@
   let sessionId = "";
   let estResult = null;
 
+  const SCN = {
+    A: { key:"single_no_plan",   title:"独身・結婚の予定なし", desc:"30歳のあなた。独身で、当面結婚の予定はありません。自分の暮らしを基準に、これから就く仕事を選んでください。正解はありません。率直に。" },
+    B: { key:"married_one_child", title:"既婚・子ども1人（育児中）", desc:"30歳のあなた。結婚していて、小さな子どもが1人います。家庭との両立も考えながら、これから就く仕事を選んでください。正解はありません。率直に。" }
+  };
+
   // ===== ユーティリティ =====
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -69,9 +74,22 @@
 
   function bindTransition() {
     $("#begin-main-btn").addEventListener("click", function () {
-      renderQuestion();
-      show("question");
+      const firstScn = SEQUENCE.find(function(q){ return q.type==="main"; }).scenario;
+      showScenarioIntro(firstScn);
     });
+    $("#scn-begin-btn").addEventListener("click", function () { renderQuestion(); show("question"); });
+    $("#switch-begin-btn").addEventListener("click", function () { renderQuestion(); show("question"); });
+  }
+  function showScenarioIntro(scn){
+    $("#scn-kicker").textContent = "1つ目の人生";
+    $("#scn-title").textContent = SCN[scn].title;
+    $("#scn-desc").textContent = SCN[scn].desc;
+    show("scenario-intro");
+  }
+  function showScenarioSwitch(scn){
+    $("#switch-title").textContent = SCN[scn].title;
+    $("#switch-desc").textContent = SCN[scn].desc;
+    show("scenario-switch");
   }
 
   // ===== 設問描画 =====
@@ -140,8 +158,11 @@
     cursor += 1;
     const advance = function () {
       if (cursor >= SEQUENCE.length) { computeAndShowResult(); return; }
-      // 練習を選んだ直後は、本番開始の案内画面を挟む（練習の位置づけを明確化）
       if (q.type === "practice") { show("transition"); return; }
+      const prev = SEQUENCE[cursor-1], next = SEQUENCE[cursor];
+      if (prev && next && prev.type==="main" && next.type==="main" && prev.scenario!==next.scenario) {
+        showScenarioSwitch(next.scenario); return;
+      }
       renderQuestion();
     };
 

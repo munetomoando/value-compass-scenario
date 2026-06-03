@@ -190,3 +190,10 @@ footer.app-foot { text-align: center; color: var(--muted); font-size: 12px; marg
 .quality-note{display:none;background:#fdeede;color:var(--warn);padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;}
 @media (max-width:560px){ .cols{grid-template-columns:1fr;} }
 @media (prefers-reduced-motion: reduce){ .reveal-card.turn,.data-poly,.tradeoff-flash.show{animation:none;transition:none;} .data-poly{transform:scale(1);opacity:1;} .tradeoff-flash.show{opacity:1;} }
+
+/* v0.3: 2シナリオ重ねレーダー */
+.data-poly-a { fill: rgba(63,111,216,.22); stroke:#3f6fd8; stroke-width:2; }
+.data-poly-b { fill: rgba(210,96,74,.22);  stroke:#d2604a; stroke-width:2; }
+/* v0.3: シナリオ提示・切替画面 */
+#scenario-intro .lead, #scenario-switch .lead { max-width:32em; }
+#scn-kicker { letter-spacing:.08em; color:#5b6679; font-weight:700; font-size:13px; }
