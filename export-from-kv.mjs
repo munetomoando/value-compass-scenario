@@ -54,7 +54,8 @@ function toCsv(records) {
     ...MRS_ATTRS.map((a) => "mrsA_" + a),
     ...MRS_ATTRS.map((a) => "mrsB_" + a),
     ...DELTA_ATTRS.map((a) => "delta_" + a),
-    "scale_diff", "fallback_constrained"
+    "scale_diff", "fallback_constrained",
+    "gender", "grade"
   ];
   const rows = records.map((r) => {
     const scores = r.scores || r.counts || {};
@@ -79,7 +80,9 @@ function toCsv(records) {
       ...MRS_ATTRS.map((a) => (est.mrs_B_manyen && a in est.mrs_B_manyen) ? est.mrs_B_manyen[a] : ""),
       ...DELTA_ATTRS.map((a) => (est.delta_wtp_manyen && a in est.delta_wtp_manyen) ? est.delta_wtp_manyen[a] : ""),
       (est.scale_diff != null) ? est.scale_diff : "",
-      (est.fallback_constrained != null) ? est.fallback_constrained : ""
+      (est.fallback_constrained != null) ? est.fallback_constrained : "",
+      (r.demographics && r.demographics.gender) || "",
+      (r.demographics && r.demographics.grade) || ""
     ].map(csvEscape).join(",");
   });
   return [header.map(csvEscape).join(","), ...rows].join("\n") + "\n";

@@ -24,11 +24,41 @@
         <p>あなたの選択の積み重ねから、<strong>どの条件を重視しているか</strong>、そして<strong>人生の状況によって価値観がどう変わるか</strong>を推定し、最後にまとめてお返しします。所要時間は約6〜8分です。</p>
         <p class="framing">これから就く仕事として選んでください。年収はその仕事に就いた<strong>30歳頃の額面</strong>、転勤・在宅などは<strong>その仕事がずっと持つ特徴</strong>です。本番では<strong>2つの人生設定（独身・結婚の予定なし ／ 既婚・子ども1人）</strong>で、それぞれの設定になったつもりで率直に選んでください。</p>
         <ul class="consent">
-          <li>回答は<strong>匿名</strong>です。氏名・学生番号など個人を特定する情報は取得しません。</li>
-          <li>本アプリは機能改善のため、匿名の回答を分析することがあります。</li>
+          <li>氏名・学生番号など<strong>個人を特定する情報は取得しません</strong>。次の画面で性別・学年を<strong>任意で</strong>うかがいますが、<strong>全体の集計のみ</strong>に使い、個人を割り出す用途には使いません。</li>
+          <li>本アプリは機能改善・研究のため、回答を<strong>集計して</strong>分析することがあります。</li>
           <li><strong>成績には一切影響しません。</strong></li>
         </ul>
         <button id="start-btn" class="primary">同意して始める</button>
+      </div>
+    </section>
+
+    <!-- 1b. 属性（任意）画面 -->
+    <section id="demographics" class="screen">
+      <div class="card">
+        <h2>はじめに<span class="optional-tag">任意</span></h2>
+        <p class="muted">以下は<strong>任意</strong>です。全体の傾向分析（集計）のみに使い、個人を特定する用途には使いません。答えたくない項目は「回答しない」のままで構いません。</p>
+        <div class="demo-field">
+          <span class="demo-label">性別</span>
+          <div class="demo-options" id="demo-gender">
+            <label><input type="radio" name="gender" value="男性">男性</label>
+            <label><input type="radio" name="gender" value="女性">女性</label>
+            <label><input type="radio" name="gender" value="その他">その他</label>
+            <label><input type="radio" name="gender" value="回答しない" checked>回答しない</label>
+          </div>
+        </div>
+        <div class="demo-field">
+          <label class="demo-label" for="demo-grade">学年</label>
+          <select id="demo-grade">
+            <option value="">回答しない</option>
+            <option value="学部1年">学部1年</option>
+            <option value="学部2年">学部2年</option>
+            <option value="学部3年">学部3年</option>
+            <option value="学部4年">学部4年</option>
+            <option value="大学院">大学院</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <button id="demo-next-btn" class="primary">回答を始める →</button>
       </div>
     </section>
 

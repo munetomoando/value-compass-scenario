@@ -87,7 +87,8 @@ async function handleSubmit(request, env, origin) {
     framing: payload.framing || null,
     question_order: payload.question_order || null,
     blocks: payload.blocks || null,
-    scenario_order: payload.scenario_order || null
+    scenario_order: payload.scenario_order || null,
+    demographics: payload.demographics || null
   };
 
   await env.LOGS.put("session:" + sessionId, JSON.stringify(record));

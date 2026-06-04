@@ -18,6 +18,7 @@
   let questionShownAt = 0;
   let sessionId = "";
   let estResult = null;
+  let demographics = { gender: null, grade: null };  // 任意・集計のみ
 
   const SCN = {
     A: { key:"single_no_plan",   title:"独身・結婚の予定なし", desc:"30歳のあなた。独身で、当面結婚の予定はありません。自分の暮らしを基準に、これから就く仕事を選んでください。正解はありません。率直に。" },
@@ -64,6 +65,16 @@
 
   function bindIntro() {
     $("#start-btn").addEventListener("click", function () {
+      show("demographics");
+    });
+  }
+
+  function bindDemographics() {
+    $("#demo-next-btn").addEventListener("click", function () {
+      var g = document.querySelector('input[name="gender"]:checked');
+      demographics.gender = (g && g.value && g.value !== "回答しない") ? g.value : null;
+      var gr = $("#demo-grade") ? $("#demo-grade").value : "";
+      demographics.grade = gr || null;
       sessionId = uuid();
       cursor = 0;
       answers = [];
@@ -323,6 +334,7 @@
       session_id: sessionId,
       timestamp: new Date().toISOString(),
       framing: META.framing,
+      demographics: demographics,
       scenario_order: firstScn==="A" ? ["single_no_plan","married_one_child"] : ["married_one_child","single_no_plan"],
       question_order: SEQUENCE.map(function(q){ return q.id; }),
       blocks: blocks,
@@ -366,6 +378,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     init();
     bindTransition();
+    bindDemographics();
     bindConfirm();
   });
 })();
